@@ -1,0 +1,37 @@
+{
+  "network": "westend",
+  "rpc_url": "wss://westend-rpc.polkadot.io",
+  "deployer_account": "//Alice",
+  "contract": {
+    "name": "kronos_prediction",
+    "version": "0.1.0",
+    "constructor": "new",
+    "gas_limit": 30000000000
+  },
+  "backend": {
+    "port": 5000,
+    "python_service_port": 5001,
+    "kronos_model": "NeoQuasar/Kronos-small",
+    "kronos_tokenizer": "NeoQuasar/Kronos-Tokenizer-base"
+  },
+  "frontend": {
+    "port": 5173,
+    "ws_provider": "wss://westend-rpc.polkadot.io"
+  },
+  "deployment": {
+    "timestamp": "",
+    "contract_address": "",
+    "deployer": "",
+    "block_hash": ""
+  },
+  "notes": {
+    "deployer_account": "使用 //Alice 用于开发，生产环境请使用真实账户助记词或密钥",
+    "gas_limit": "根据实际情况调整 gas 限制",
+    "network_options": [
+      "wss://westend-rpc.polkadot.io (Westend 测试网)",
+      "wss://rpc.polkadot.io (Polkadot 主网)",
+      "ws://127.0.0.1:9944 (本地节点)"
+    ]
+  }
+}
+
