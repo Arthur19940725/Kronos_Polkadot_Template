@@ -10,7 +10,7 @@ import {
   Alert,
   Snackbar
 } from '@mui/material';
-import WalletConnect from './components/WalletConnect';
+import MultiWalletConnect from './components/MultiWalletConnect';
 import PredictionPanel from './components/PredictionPanel';
 import { InjectedAccountWithMeta } from '@polkadot/extension-inject/types';
 
@@ -83,7 +83,7 @@ function App() {
                 Polkadot Westend
               </Typography>
             </Box>
-            <WalletConnect 
+            <MultiWalletConnect 
               account={account} 
               setAccount={setAccount} 
               showNotification={showNotification}
@@ -104,14 +104,41 @@ function App() {
               }}
             >
               <Typography variant="h4" gutterBottom>
-                Welcome to Kronos Prediction DApp
+                🔮 Welcome to Kronos Prediction DApp
               </Typography>
               <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
-                Please connect your Polkadot wallet to start predicting cryptocurrency prices
+                AI-powered cryptocurrency price predictions on Polkadot
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 3 }}>
                 Powered by Kronos AI Foundation Model
               </Typography>
+              
+              <Alert severity="info" sx={{ mt: 3, textAlign: 'left' }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  🚀 Getting Started:
+                </Typography>
+                <Box component="ol" sx={{ pl: 2, m: 0 }}>
+                  <li>Click "Connect Wallet" button above</li>
+                  <li>Select your wallet (Polkadot.js, OKX, SubWallet, or Talisman)</li>
+                  <li>If you don't have a wallet, we'll guide you to install one</li>
+                  <li>Create an account in your wallet if you haven't already</li>
+                  <li>Authorize the connection and start predicting!</li>
+                </Box>
+              </Alert>
+
+              <Alert severity="warning" sx={{ mt: 2, textAlign: 'left' }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  📱 Supported Wallets:
+                </Typography>
+                <Typography variant="body2">
+                  • Polkadot.js Extension (Recommended)<br/>
+                  • OKX Wallet (Multi-chain)<br/>
+                  • SubWallet<br/>
+                  • Talisman<br/>
+                  <br/>
+                  <strong>Note:</strong> MetaMask requires Polkadot Snap. We recommend using OKX Wallet or Polkadot.js for the best experience.
+                </Typography>
+              </Alert>
             </Box>
           ) : (
             <PredictionPanel 

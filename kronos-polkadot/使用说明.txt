@@ -1,0 +1,61 @@
+===================================
+  Kronos 快速启动指南（Windows）
+===================================
+
+第一步：启动 Docker Desktop
+---------------------------
+1. 点击开始菜单
+2. 搜索 "Docker Desktop"  
+3. 启动应用
+4. 等待右下角图标显示 Docker 正在运行（绿色）
+
+第二步：运行启动脚本
+---------------------------
+双击文件：START_HERE.ps1
+
+或者在 PowerShell 中运行：
+  cd D:\code\Kronos_Polkadot_Template\kronos-polkadot
+  .\START_HERE.ps1
+
+第三步：等待启动（约30秒）
+---------------------------
+脚本会自动：
+  ✓ 检查 Docker 状态
+  ✓ 启动所有服务
+  ✓ 验证服务
+  ✓ 打开浏览器
+
+第四步：访问应用
+---------------------------
+浏览器会自动打开：http://localhost:3000
+
+也可以手动访问：
+  前端: http://localhost:3000
+  后端: http://localhost:5000
+
+===================================
+
+常见问题：
+
+Q: 脚本无法运行？
+A: 右键点击 START_HERE.ps1 → 选择"使用 PowerShell 运行"
+
+Q: Docker Desktop 未运行？  
+A: 手动启动 Docker Desktop，等待启动完成后再运行脚本
+
+Q: 端口被占用？
+A: 运行：docker-compose down
+   然后重新运行脚本
+
+Q: 如何停止服务？
+A: 打开 PowerShell，运行：
+   cd D:\code\Kronos_Polkadot_Template\kronos-polkadot
+   docker-compose down
+
+===================================
+
+需要帮助？
+查看详细文档：QUICKSTART_WINDOWS.md
+
+祝使用愉快！
+

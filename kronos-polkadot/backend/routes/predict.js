@@ -3,47 +3,43 @@ import axios from 'axios';
 
 const router = express.Router();
 
-// CoinGecko API 配置
-const COINGECKO_BASE_URL = 'https://api.coingecko.com/api/v3';
+// 币安 API 配置
+const BINANCE_BASE_URL = 'https://api.binance.com/api/v3';
+const BINANCE_FAPI_URL = 'https://fapi.binance.com/fapi/v1';
 
-// 符号映射
+// 符号映射（币安交易对格式）
 const SYMBOL_MAP = {
-  'BTC': 'bitcoin',
-  'ETH': 'ethereum',
-  'DOT': 'polkadot',
-  'SOL': 'solana',
-  'ADA': 'cardano',
-  'MATIC': 'matic-network',
-  'LINK': 'chainlink',
-  'AVAX': 'avalanche-2'
+  'BTC': 'BTCUSDT',
+  'ETH': 'ETHUSDT',
+  'DOT': 'DOTUSDT',
+  'SOL': 'SOLUSDT',
+  'ADA': 'ADAUSDT',
+  'MATIC': 'MATICUSDT',
+  'LINK': 'LINKUSDT',
+  'AVAX': 'AVAXUSDT'
 };
 
 /**
- * 获取当前价格
+ * 获取当前价格（币安 API）
  */
 async function fetchCurrentPrice(symbol) {
   try {
-    const coinId = SYMBOL_MAP[symbol.toUpperCase()] || symbol.toLowerCase();
-    const response = await axios.get(`${COINGECKO_BASE_URL}/simple/price`, {
-      params: {
-        ids: coinId,
-        vs_currencies: 'usd',
-        include_24hr_change: true,
-        include_24hr_vol: true,
-        include_market_cap: true
-      }
+    const tradingPair = SYMBOL_MAP[symbol.toUpperCase()] || `${symbol.toUpperCase()}USDT`;
+    
+    // 获取24小时价格变动统计
+    const ticker24h = await axios.get(`${BINANCE_BASE_URL}/ticker/24hr`, {
+      params: { symbol: tradingPair }
     });
 
-    const data = response.data[coinId];
-    if (!data) {
-      throw new Error(`Price data not found for ${symbol}`);
-    }
-
+    const data = ticker24h.data;
+    
     return {
-      price: data.usd,
-      change24h: data.usd_24h_change || 0,
-      volume24h: data.usd_24h_vol || 0,
-      marketCap: data.usd_market_cap || 0
+      price: parseFloat(data.lastPrice),
+      change24h: parseFloat(data.priceChangePercent),
+      volume24h: parseFloat(data.quoteVolume), // USDT 计价的成交量
+      high24h: parseFloat(data.highPrice),
+      low24h: parseFloat(data.lowPrice),
+      trades24h: data.count
     };
   } catch (error) {
     console.error(`Error fetching price for ${symbol}:`, error.message);
@@ -52,23 +48,65 @@ async function fetchCurrentPrice(symbol) {
 }
 
 /**
- * 获取历史数据
+ * 获取历史数据（币安 K线数据）
  */
 async function fetchHistoricalData(symbol, days = 7) {
   try {
-    const coinId = SYMBOL_MAP[symbol.toUpperCase()] || symbol.toLowerCase();
-    const response = await axios.get(`${COINGECKO_BASE_URL}/coins/${coinId}/market_chart`, {
+    const tradingPair = SYMBOL_MAP[symbol.toUpperCase()] || `${symbol.toUpperCase()}USDT`;
+    
+    // 根据天数确定时间间隔
+    const interval = days <= 1 ? '1h' : (days <= 7 ? '4h' : '1d');
+    
+    // 计算开始时间
+    const endTime = Date.now();
+    const startTime = endTime - (days * 24 * 60 * 60 * 1000);
+    
+    // 获取 K线数据
+    const response = await axios.get(`${BINANCE_BASE_URL}/klines`, {
       params: {
-        vs_currency: 'usd',
-        days: days,
-        interval: days > 1 ? 'daily' : 'hourly'
+        symbol: tradingPair,
+        interval: interval,
+        startTime: startTime,
+        endTime: endTime,
+        limit: 1000
       }
     });
 
+    // 转换数据格式为与 CoinGecko 兼容的格式
+    const prices = [];
+    const volumes = [];
+    const ohlcv = [];
+    
+    response.data.forEach(kline => {
+      const [
+        openTime,
+        open,
+        high,
+        low,
+        close,
+        volume,
+        closeTime,
+        quoteVolume
+      ] = kline;
+      
+      prices.push([openTime, parseFloat(close)]);
+      volumes.push([openTime, parseFloat(quoteVolume)]);
+      
+      ohlcv.push({
+        timestamp: openTime,
+        open: parseFloat(open),
+        high: parseFloat(high),
+        low: parseFloat(low),
+        close: parseFloat(close),
+        volume: parseFloat(volume),
+        quoteVolume: parseFloat(quoteVolume)
+      });
+    });
+
     return {
-      prices: response.data.prices,
-      volumes: response.data.total_volumes,
-      marketCaps: response.data.market_caps
+      prices: prices,
+      volumes: volumes,
+      ohlcv: ohlcv // 额外提供完整的 OHLCV 数据
     };
   } catch (error) {
     console.error(`Error fetching historical data for ${symbol}:`, error.message);
@@ -162,9 +200,12 @@ router.get('/predict', async (req, res) => {
       currentPrice: currentPriceData.price,
       change24h: currentPriceData.change24h,
       volume24h: currentPriceData.volume24h,
-      marketCap: currentPriceData.marketCap,
+      high24h: currentPriceData.high24h,
+      low24h: currentPriceData.low24h,
+      trades24h: currentPriceData.trades24h,
       prediction: prediction,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      dataSource: 'Binance'
     });
   } catch (error) {
     console.error('Prediction error:', error);
