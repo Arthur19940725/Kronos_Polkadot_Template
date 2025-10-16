@@ -8,10 +8,14 @@ import {
   Container, 
   Box,
   Alert,
-  Snackbar
+  Snackbar,
+  Tabs,
+  Tab
 } from '@mui/material';
+import { ShowChart, Assignment, List } from '@mui/icons-material';
 import MultiWalletConnect from './components/MultiWalletConnect';
 import PredictionPanel from './components/PredictionPanel';
+import CryptoPredictor from './components/CryptoPredictor';
 import { InjectedAccountWithMeta } from '@polkadot/extension-inject/types';
 
 const darkTheme = createTheme({
@@ -32,6 +36,7 @@ const darkTheme = createTheme({
 
 function App() {
   const [account, setAccount] = useState<InjectedAccountWithMeta | null>(null);
+  const [activeTab, setActiveTab] = useState(0);
   const [notification, setNotification] = useState<{
     open: boolean;
     message: string;
@@ -141,10 +146,79 @@ function App() {
               </Alert>
             </Box>
           ) : (
-            <PredictionPanel 
-              account={account} 
-              showNotification={showNotification}
-            />
+            <Box>
+              {/* 导航标签页 */}
+              <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+                <Tabs 
+                  value={activeTab} 
+                  onChange={(e, newValue) => setActiveTab(newValue)}
+                  sx={{ 
+                    '& .MuiTab-root': { 
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600
+                    }
+                  }}
+                >
+                  <Tab 
+                    icon={<ShowChart />} 
+                    label="Crypto Prediction" 
+                    iconPosition="start"
+                    sx={{ 
+                      bgcolor: activeTab === 0 ? 'primary.main' : 'transparent',
+                      color: activeTab === 0 ? 'white' : 'text.primary',
+                      borderRadius: '8px 8px 0 0',
+                      mx: 0.5
+                    }}
+                  />
+                  <Tab 
+                    icon={<Assignment />} 
+                    label="Create Task" 
+                    iconPosition="start"
+                    sx={{ 
+                      bgcolor: activeTab === 1 ? 'primary.main' : 'transparent',
+                      color: activeTab === 1 ? 'white' : 'text.primary',
+                      borderRadius: '8px 8px 0 0',
+                      mx: 0.5
+                    }}
+                  />
+                  <Tab 
+                    icon={<List />} 
+                    label="Task List" 
+                    iconPosition="start"
+                    sx={{ 
+                      bgcolor: activeTab === 2 ? 'primary.main' : 'transparent',
+                      color: activeTab === 2 ? 'white' : 'text.primary',
+                      borderRadius: '8px 8px 0 0',
+                      mx: 0.5
+                    }}
+                  />
+                </Tabs>
+              </Box>
+
+              {/* 标签页内容 */}
+              {activeTab === 0 && (
+                <CryptoPredictor />
+              )}
+              
+              {activeTab === 1 && (
+                <PredictionPanel 
+                  account={account} 
+                  showNotification={showNotification}
+                />
+              )}
+              
+              {activeTab === 2 && (
+                <Box sx={{ textAlign: 'center', py: 8 }}>
+                  <Typography variant="h5" gutterBottom>
+                    Task List
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary">
+                    Coming soon...
+                  </Typography>
+                </Box>
+              )}
+            </Box>
           )}
         </Container>
 

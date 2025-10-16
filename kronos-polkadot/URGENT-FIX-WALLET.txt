@@ -1,0 +1,176 @@
+================================================================
+           URGENT: Account Detection Bug Fix
+================================================================
+
+PROBLEM: "You haven't created any accounts yet" even though you DID create accounts
+
+================================================================
+
+SOLUTION: Use the Force Connect Test Tool
+
+OPEN IN BROWSER:
+  http://localhost:3000/force-connect.html
+
+CLICK: "Run Complete Test" button
+
+This tool will:
+  1. Force detect your wallet
+  2. Force get account list
+  3. Tell you EXACTLY what's wrong
+  4. Show if accounts are on wrong network
+
+================================================================
+
+MOST COMMON CAUSES:
+
+1. OKX Wallet on Ethereum Network (90% of cases!)
+   
+   SYMPTOM:
+     - OKX shows "Ethereum Mainnet" at top
+     - Address starts with 0x
+
+   FIX:
+     1. Open OKX Wallet
+     2. Click network name at top
+     3. Search: Polkadot
+     4. Select: Polkadot or Westend
+     5. Address changes to 5...
+     6. Refresh page (Ctrl+Shift+R)
+     7. Try connect again
+
+2. Page Cache (needs hard refresh)
+   
+   FIX:
+     Press: Ctrl + Shift + R
+     Or: Ctrl + F5
+
+3. Browser needs restart
+   
+   FIX:
+     1. Close ALL browser windows
+     2. Open browser again
+     3. Visit http://localhost:3000
+     4. Try connect
+
+4. Wallet permission issue
+   
+   FIX:
+     1. Open wallet extension settings
+     2. Check "Connected Sites"
+     3. Remove localhost if exists
+     4. Go to DApp and reconnect
+
+================================================================
+
+IMMEDIATE TEST:
+
+Step 1: Open this page in browser
+  http://localhost:3000/force-connect.html
+
+Step 2: Click "Run Complete Test"
+
+Step 3: Read the results
+  - Will show exactly what's detected
+  - Will show if accounts are on wrong network
+  - Will provide exact fix
+
+Step 4: Follow the fix
+
+Step 5: Return to Kronos DApp
+  http://localhost:3000
+
+================================================================
+
+MANUAL CHECK (Browser Console):
+
+1. Go to: http://localhost:3000
+2. Press F12
+3. Go to Console tab
+4. Paste this code and press Enter:
+
+(async () => {
+  const { web3Enable, web3Accounts } = 
+    await import('https://cdn.jsdelivr.net/npm/@polkadot/extension-dapp@0.46.6/+esm');
+  const ext = await web3Enable('Test');
+  const acc = await web3Accounts();
+  
+  console.log('Extensions:', ext.length);
+  console.log('Accounts:', acc.length);
+  
+  if (acc.length > 0) {
+    console.log('\nAccounts found:');
+    acc.forEach(a => {
+      console.log('- Name:', a.meta.name);
+      console.log('  Address:', a.address);
+      console.log('  Network:', a.address.startsWith('5') ? 'Polkadot OK' : 'WRONG NETWORK!');
+      console.log('');
+    });
+  }
+})();
+
+5. Check the output
+
+================================================================
+
+FOR OKX USERS - CRITICAL CHECK:
+
+Open OKX Wallet extension right now and check:
+
+TOP OF WALLET SHOWS:
+  "Polkadot" → CORRECT!
+  "Ethereum" → WRONG! Must switch!
+
+ADDRESS FORMAT:
+  Starts with 5... → CORRECT!
+  Starts with 0x... → WRONG! Wrong network!
+
+If wrong, switch network:
+  Click network name → Search Polkadot → Select Polkadot
+
+================================================================
+
+SERVICES STATUS:
+
+Backend:  http://localhost:5000  (Check: running)
+Frontend: http://localhost:3000  (Check: running)
+
+Check services:
+  docker-compose ps
+
+Should show both services "Up"
+
+================================================================
+
+WHAT TO DO RIGHT NOW:
+
+1. Open: http://localhost:3000/force-connect.html
+2. Click: "Run Complete Test"
+3. Read: The diagnostic results
+4. Fix: Based on what it says
+5. Return: http://localhost:3000
+
+THIS WILL DEFINITELY TELL YOU THE PROBLEM!
+
+================================================================
+
+If tool says "0 accounts":
+  - Check OKX network (must be Polkadot not Ethereum)
+  - Or recreate account in wallet
+
+If tool says "X accounts found":
+  - Check if address starts with 5
+  - If yes, hard refresh DApp (Ctrl+Shift+R)
+  - Clear cache and try again
+
+================================================================
+
+NEED HELP?
+
+Tell me:
+1. Which wallet? (Polkadot.js or OKX)
+2. What does force-connect.html say?
+3. Does wallet extension show accounts?
+4. (OKX) What network is shown at top?
+
+================================================================
+

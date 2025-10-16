@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>强制钱包连接测试 - Kronos</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background: #1a1a1a; 
+            color: #fff; 
+            padding: 20px; 
+            max-width: 1200px; 
+            margin: 0 auto;
+        }
+        .box { 
+            background: #2a2a2a; 
+            padding: 20px; 
+            margin: 15px 0; 
+            border-radius: 8px; 
+            border-left: 4px solid #E6007A;
+        }
+        .success { border-left-color: #28a745; background: #1a3d1a; }
+        .error { border-left-color: #dc3545; background: #3d1a1a; }
+        .warning { border-left-color: #ffc107; background: #3d3d1a; }
+        button {
+            background: #E6007A;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 16px;
+        }
+        button:hover { background: #c00066; }
+        pre {
+            background: #0a0a0a;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            color: #0f0;
+        }
+        h1 { color: #E6007A; }
+        h2 { color: #00B2FF; margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <h1>🔧 强制钱包连接测试工具</h1>
+    <p>专门用于解决"已创建账户但无法检测"的问题</p>
+
+    <div style="margin: 20px 0;">
+        <button onclick="step1()">步骤1：检查钱包</button>
+        <button onclick="step2()">步骤2：强制启用</button>
+        <button onclick="step3()">步骤3：获取账户</button>
+        <button onclick="runAll()">🚀 一键完整测试</button>
+        <button onclick="location.reload()">🔄 刷新页面</button>
+    </div>
+
+    <div id="output"></div>
+
+    <script type="module">
+        const output = document.getElementById('output');
+        let allAccounts = [];
+
+        function log(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.className = 'box ' + type;
+            div.innerHTML = msg;
+            output.appendChild(div);
+        }
+
+        function code(text) {
+            const pre = document.createElement('pre');
+            pre.textContent = text;
+            output.appendChild(pre);
+        }
+
+        // 步骤1：检查所有可能的钱包对象
+        window.step1 = function() {
+            output.innerHTML = '<h2>步骤1：检查钱包对象</h2>';
+            
+            log('正在检查 window 对象中的钱包...', 'info');
+            
+            const walletChecks = [
+                { name: 'injectedWeb3', key: 'injectedWeb3' },
+                { name: 'Polkadot.js', key: 'polkadot' },
+                { name: 'OKX', key: 'okxwallet' },
+                { name: 'SubWallet', key: 'SubWallet' },
+                { name: 'Talisman', key: 'talismanEth' }
+            ];
+
+            let found = [];
+            
+            walletChecks.forEach(check => {
+                if (typeof window[check.key] !== 'undefined') {
+                    log(`✅ 检测到: ${check.name} (window.${check.key})`, 'success');
+                    found.push(check.name);
+                } else {
+                    log(`❌ 未检测到: ${check.name}`, 'error');
+                }
+            });
+
+            if (window.injectedWeb3) {
+                const keys = Object.keys(window.injectedWeb3);
+                code(`injectedWeb3 包含的钱包：\n${keys.join('\n')}`);
+            }
+
+            if (found.length === 0) {
+                log('❌ 没有检测到任何钱包对象！<br><br><strong>解决方法：</strong><ol><li>确保钱包扩展已安装且启用</li><li>访问 chrome://extensions/ 检查</li><li>刷新此页面</li></ol>', 'error');
+            } else {
+                log(`✅ 总共检测到 ${found.length} 个钱包对象`, 'success');
+            }
+        };
+
+        // 步骤2：强制启用扩展
+        window.step2 = async function() {
+            output.innerHTML = '<h2>步骤2：强制启用 Polkadot 扩展</h2>';
+            
+            try {
+                log('导入 Polkadot 库...', 'info');
+                const { web3Enable } = await import('https://cdn.jsdelivr.net/npm/@polkadot/extension-dapp@0.46.6/+esm');
+                
+                log('调用 web3Enable（强制授权）...', 'info');
+                const extensions = await web3Enable('Kronos Force Connect');
+                
+                if (extensions.length === 0) {
+                    log('❌ 没有扩展响应<br><br><strong>可能原因：</strong><ul><li>钱包扩展未安装</li><li>扩展被禁用</li><li>浏览器不支持</li></ul><br><strong>解决：</strong><ul><li>检查 chrome://extensions/</li><li>确保扩展已启用（开关是蓝色）</li><li>重启浏览器</li></ul>', 'error');
+                    return;
+                }
+
+                log(`✅ 成功！${extensions.length} 个扩展已启用`, 'success');
+                
+                extensions.forEach((ext, i) => {
+                    code(`扩展 ${i+1}:\n  名称: ${ext.name}\n  版本: ${ext.version}\n  类型: ${ext.type || '标准'}`);
+                });
+
+                log('✅ 扩展通信正常，请继续步骤3', 'success');
+                
+            } catch (error) {
+                log(`❌ 错误: ${error.message}<br><br>${error.stack}`, 'error');
+            }
+        };
+
+        // 步骤3：获取账户
+        window.step3 = async function() {
+            output.innerHTML = '<h2>步骤3：强制获取账户列表</h2>';
+            
+            try {
+                const { web3Enable, web3Accounts } = await import('https://cdn.jsdelivr.net/npm/@polkadot/extension-dapp@0.46.6/+esm');
+                
+                log('启用扩展...', 'info');
+                const extensions = await web3Enable('Kronos Account Check');
+                log(`✅ ${extensions.length} 个扩展已启用`, 'success');
+
+                log('获取账户列表...', 'info');
+                const accounts = await web3Accounts();
+                
+                allAccounts = accounts;
+
+                if (accounts.length === 0) {
+                    log('❌ 找到 0 个账户<br><br><strong>这意味着：</strong>', 'error');
+                    
+                    const hasPolkadotJS = extensions.some(e => e.name.includes('polkadot-js'));
+                    const hasOKX = extensions.some(e => e.name.toLowerCase().includes('okx'));
+
+                    if (hasOKX) {
+                        log(`<strong>🟠 检测到 OKX Wallet</strong><br><br>
+                            <strong style="color: #ffc107;">最可能的原因：您在以太坊网络上！</strong><br><br>
+                            <strong>立即修复：</strong>
+                            <ol>
+                                <li>打开 OKX Wallet 扩展</li>
+                                <li>查看顶部显示什么网络</li>
+                                <li>如果是 "Ethereum Mainnet" → 这就是问题！</li>
+                                <li>点击网络名称</li>
+                                <li>搜索框输入：<strong>Polkadot</strong></li>
+                                <li>选择 <strong>Polkadot</strong> 或 <strong>Westend</strong></li>
+                                <li>确认顶部变成 "Polkadot"</li>
+                                <li>地址从 0x... 变成 5...</li>
+                                <li>刷新此页面重新测试</li>
+                            </ol>`, 'warning');
+                    }
+
+                    if (hasPolkadotJS) {
+                        log(`<strong>🔴 检测到 Polkadot.js</strong><br><br>
+                            <strong>账户确实不存在，需要创建：</strong>
+                            <ol>
+                                <li>点击浏览器右上角红色圆点图标</li>
+                                <li>点击 [+] 加号按钮</li>
+                                <li>选择 "Create new account"</li>
+                                <li>用纸笔抄写 12 个助记词</li>
+                                <li>设置账户名和密码</li>
+                                <li>创建完成后刷新此页面</li>
+                            </ol>`, 'warning');
+                    }
+
+                    if (!hasPolkadotJS && !hasOKX) {
+                        log('未检测到常见钱包。请确保已安装 Polkadot.js 或 OKX Wallet。', 'error');
+                    }
+
+                    return;
+                }
+
+                // 找到账户了！
+                log(`🎉 太好了！找到 ${accounts.length} 个账户`, 'success');
+
+                accounts.forEach((acc, i) => {
+                    const isPolkadot = acc.address.startsWith('5');
+                    const networkType = isPolkadot ? 'Polkadot ✅' : '其他网络 ⚠️';
+                    
+                    code(`账户 ${i+1}:
+  名称: ${acc.meta.name || '未命名'}
+  地址: ${acc.address}
+  来源: ${acc.meta.source}
+  网络: ${networkType}
+  地址类型: ${acc.type || '未知'}`);
+
+                    if (!isPolkadot) {
+                        log(`⚠️ 账户 "${acc.meta.name}" 不是 Polkadot 地址！<br>地址应该以 5 开头，当前是 ${acc.address.substring(0, 2)}开头。<br><br>如果这是 OKX 账户，请切换到 Polkadot 网络。`, 'warning');
+                    }
+                });
+
+                const polkadotAccounts = accounts.filter(a => a.address.startsWith('5'));
+                
+                if (polkadotAccounts.length > 0) {
+                    log(`<h3>✅ 检测结果：完美！</h3>
+                        <p>找到 ${polkadotAccounts.length} 个 Polkadot 账户，可以正常使用！</p>
+                        <br>
+                        <strong>下一步：</strong>
+                        <ol>
+                            <li>返回 Kronos DApp: <a href="http://localhost:3000" style="color: #00ff00;">http://localhost:3000</a></li>
+                            <li>按 <strong>Ctrl + Shift + R</strong> 强制刷新</li>
+                            <li>点击 "Connect Wallet"</li>
+                            <li>应该能看到您的账户了</li>
+                        </ol>
+                        <br>
+                        <a href="http://localhost:3000" style="display: inline-block; background: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                            返回 Kronos DApp →
+                        </a>`, 'success');
+                } else {
+                    log('⚠️ 有账户，但都不是 Polkadot 格式<br>请切换钱包网络到 Polkadot', 'warning');
+                }
+
+            } catch (error) {
+                log(`❌ 错误: ${error.message}`, 'error');
+                code(error.stack);
+            }
+        };
+
+        // 一键完整测试
+        window.runAll = async function() {
+            output.innerHTML = '<h2>🚀 完整测试流程</h2>';
+            
+            try {
+                // Test 1
+                log('[1/5] 检查浏览器环境...', 'info');
+                code(`浏览器: ${navigator.userAgent.split('(')[1].split(')')[0]}
+URL: ${window.location.href}
+时间: ${new Date().toLocaleString()}`);
+
+                // Test 2
+                log('[2/5] 检查钱包对象...', 'info');
+                
+                const walletObjects = [];
+                if (window.injectedWeb3) {
+                    const keys = Object.keys(window.injectedWeb3);
+                    walletObjects.push(...keys);
+                    log(`✅ injectedWeb3: ${keys.join(', ')}`, 'success');
+                } else {
+                    log('❌ injectedWeb3 不存在', 'error');
+                }
+
+                // Test 3
+                log('[3/5] 导入 Polkadot 库...', 'info');
+                const { web3Enable, web3Accounts, isWeb3Injected } = 
+                    await import('https://cdn.jsdelivr.net/npm/@polkadot/extension-dapp@0.46.6/+esm');
+                
+                log('✅ Polkadot 库加载成功', 'success');
+
+                // Test 4
+                log('[4/5] 启用扩展并请求授权...', 'info');
+                log('⏳ 请在钱包弹窗中点击"允许"...', 'warning');
+                
+                const extensions = await web3Enable('Kronos Force Test');
+                
+                if (extensions.length === 0) {
+                    log('❌ 没有扩展响应！<br><br><strong>请检查：</strong><ol><li>钱包扩展是否已安装</li><li>扩展是否已启用</li><li>是否允许了弹窗</li></ol>', 'error');
+                    return;
+                }
+
+                log(`✅ ${extensions.length} 个扩展已响应`, 'success');
+                extensions.forEach(ext => {
+                    code(`扩展: ${ext.name}\n版本: ${ext.version}`);
+                });
+
+                // Test 5
+                log('[5/5] 强制获取所有账户...', 'info');
+                
+                const accounts = await web3Accounts();
+                allAccounts = accounts;
+                
+                log(`<strong>结果：找到 ${accounts.length} 个账户</strong>`, accounts.length > 0 ? 'success' : 'error');
+
+                if (accounts.length === 0) {
+                    log(`<div style="padding: 20px; background: #3d1a1a; border-radius: 8px;">
+                        <h3>❌ 确认：您的钱包中真的没有账户！</h3>
+                        <p>即使您觉得已经创建了，但程序确实检测不到。</p>
+                        <br>
+                        <strong>最可能的原因（按概率排序）：</strong>
+                        <ol style="line-height: 2;">
+                            <li><strong>90%：(OKX用户) 您在以太坊网络上创建的账户</strong><br>
+                                → 必须切换到 Polkadot 网络<br>
+                                → OKX 顶部点击网络 → 搜索 Polkadot → 切换</li>
+                            
+                            <li><strong>5%：账户创建未完成</strong><br>
+                                → 重新打开钱包扩展检查<br>
+                                → 确认能看到账户列表</li>
+                            
+                            <li><strong>3%：钱包扩展权限问题</strong><br>
+                                → chrome://extensions/ → 检查权限<br>
+                                → 允许访问所有网站</li>
+                            
+                            <li><strong>2%：浏览器缓存</strong><br>
+                                → Ctrl + Shift + R 强制刷新<br>
+                                → 或清除缓存</li>
+                        </ol>
+                        <br>
+                        <strong>立即检查：</strong>
+                        <ul>
+                            <li>打开您的钱包扩展</li>
+                            <li>能看到账户吗？</li>
+                            <li>账户地址是什么样的？</li>
+                            <li>如果是 0x 开头 → 以太坊账户，需要切换</li>
+                            <li>如果是 5 开头 → Polkadot 账户，正确</li>
+                        </ul>
+                    </div>`, 'error');
+                } else {
+                    log('<h3>🎉 成功！找到账户了！</h3>', 'success');
+                    
+                    accounts.forEach((acc, i) => {
+                        const isPolkadot = acc.address.startsWith('5');
+                        code(`账户 ${i+1}:
+名称: ${acc.meta.name || '未命名'}
+地址: ${acc.address}
+来源: ${acc.meta.source}
+网络: ${isPolkadot ? 'Polkadot ✅' : '非Polkadot ⚠️'}
+地址格式: ${acc.address.substring(0, 2)}开头`);
+
+                        if (!isPolkadot) {
+                            log(`⚠️ 警告：账户 "${acc.meta.name}" 不是 Polkadot 地址！<br>需要切换网络到 Polkadot。`, 'warning');
+                        }
+                    });
+
+                    const polkadotAccounts = accounts.filter(a => a.address.startsWith('5'));
+                    
+                    if (polkadotAccounts.length > 0) {
+                        log(`<div style="padding: 20px; background: #1a3d1a; border-radius: 8px;">
+                            <h3>✅✅✅ 完美！检测成功！✅✅✅</h3>
+                            <p>找到 ${polkadotAccounts.length} 个 Polkadot 账户，完全正常！</p>
+                            <br>
+                            <strong>如果 Kronos DApp 还是无法连接，请：</strong>
+                            <ol>
+                                <li><strong>强制刷新 DApp 页面</strong>
+                                    <ul>
+                                        <li>在 DApp 页面按 <strong>Ctrl + Shift + R</strong></li>
+                                        <li>或 Ctrl + F5</li>
+                                    </ul>
+                                </li>
+                                <li><strong>清除浏览器缓存</strong>
+                                    <ul>
+                                        <li>Ctrl + Shift + Delete</li>
+                                        <li>勾选"缓存的图片和文件"</li>
+                                        <li>点击"清除数据"</li>
+                                    </ul>
+                                </li>
+                                <li><strong>重启浏览器</strong>
+                                    <ul>
+                                        <li>完全关闭所有浏览器窗口</li>
+                                        <li>重新打开</li>
+                                        <li>访问 http://localhost:3000</li>
+                                    </ul>
+                                </li>
+                                <li><strong>检查钱包权限</strong>
+                                    <ul>
+                                        <li>打开钱包扩展设置</li>
+                                        <li>查看"Connected Sites"</li>
+                                        <li>确保 localhost 被允许</li>
+                                    </ul>
+                                </li>
+                            </ol>
+                            <br>
+                            <a href="http://localhost:3000" style="display: inline-block; background: #28a745; color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 1.1em;">
+                                返回 Kronos DApp（记得强制刷新！）
+                            </a>
+                        </div>`, 'success');
+                    } else {
+                        log('所有账户都不是 Polkadot 格式<br>请在钱包中切换到 Polkadot 网络', 'warning');
+                    }
+                }
+
+            } catch (error) {
+                log(`❌ 错误: ${error.message}`, 'error');
+                code(error.stack);
+            }
+        };
+
+        // 一键运行所有测试
+        window.runAll = async function() {
+            output.innerHTML = '';
+            
+            log('<h2>🚀 开始完整诊断（请耐心等待）</h2>', 'info');
+            
+            await new Promise(r => setTimeout(r, 500));
+            await step1();
+            
+            await new Promise(r => setTimeout(r, 1000));
+            await step2();
+            
+            await new Promise(r => setTimeout(r, 1000));
+            await step3();
+            
+            log('<h2>✅ 诊断完成</h2>', 'success');
+        };
+
+        // 自动运行
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                log('<div style="background: #3d3d1a; padding: 20px; border-radius: 8px;"><h3>⚡ 自动诊断将在 3 秒后开始...</h3><p>或点击上方按钮手动运行</p></div>', 'warning');
+                
+                setTimeout(() => {
+                    runAll();
+                }, 3000);
+            }, 500);
+        });
+    </script>
+</body>
+</html>
+

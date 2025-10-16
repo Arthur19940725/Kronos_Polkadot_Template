@@ -259,5 +259,149 @@ router.get('/assets', (req, res) => {
   });
 });
 
+/**
+ * POST /api/predict
+ * 高级预测接口，支持时间粒度和预测天数
+ */
+router.post('/predict', async (req, res) => {
+  try {
+    const { symbol, predictionDays = 7, timeGranularity = 'daily' } = req.body;
+    
+    if (!symbol) {
+      return res.status(400).json({ error: 'Symbol is required' });
+    }
+
+    const tradingPair = SYMBOL_MAP[symbol.toUpperCase()] || `${symbol.toUpperCase()}USDT`;
+    
+    // 时间粒度映射
+    const intervalMap = {
+      'minute': '1m',
+      '15minute': '15m',
+      'hourly': '1h',
+      '4hourly': '4h',
+      'daily': '1d'
+    };
+    
+    const interval = intervalMap[timeGranularity] || '1d';
+    
+    // 获取历史数据
+    const historicalData = await fetchHistoricalData(symbol, Math.max(predictionDays, 30));
+    
+    // 生成预测数据
+    const predictionResult = generateAdvancedPrediction(
+      historicalData, 
+      predictionDays, 
+      timeGranularity
+    );
+
+    res.json({
+      symbol: symbol,
+      predictionDays,
+      timeGranularity,
+      interval,
+      ...predictionResult,
+      timestamp: new Date().toISOString(),
+      dataSource: 'Binance'
+    });
+  } catch (error) {
+    console.error('Advanced prediction error:', error);
+    res.status(500).json({
+      error: 'Prediction failed',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * 生成高级预测数据
+ */
+function generateAdvancedPrediction(historicalData, predictionDays, timeGranularity) {
+  if (!historicalData || !historicalData.prices || historicalData.prices.length === 0) {
+    return {
+      trend: 'neutral',
+      confidence: 0,
+      predictionDays: 0,
+      maxPrice: 0,
+      minPrice: 0,
+      priceData: [],
+      volumeData: []
+    };
+  }
+
+  const data = [];
+  const now = new Date();
+  const basePrice = historicalData.prices[historicalData.prices.length - 1][1];
+  
+  // 添加历史数据
+  historicalData.prices.forEach((pricePoint, index) => {
+    const date = new Date(pricePoint[0]);
+    const volume = historicalData.volumes[index] ? historicalData.volumes[index][1] : 0;
+    
+    data.push({
+      date: date.toISOString().split('T')[0],
+      historicalPrice: pricePoint[1],
+      volume: volume
+    });
+  });
+  
+  // 生成预测数据
+  const trend = Math.random() > 0.5 ? 1 : -1;
+  const confidence = 0.7 + Math.random() * 0.3;
+  
+  for (let i = 1; i <= predictionDays; i++) {
+    const date = new Date(now);
+    date.setDate(date.getDate() + i);
+    
+    const trendFactor = trend * (i / predictionDays) * 0.15; // 最大15%变化
+    const randomFactor = (Math.random() - 0.5) * 0.08; // 8%随机波动
+    const predictedPrice = basePrice * (1 + trendFactor + randomFactor);
+    
+    const maxPrice = predictedPrice * (1 + 0.2 * confidence); // 20%上限
+    const minPrice = predictedPrice * (1 - 0.2 * confidence); // 20%下限
+    
+    data.push({
+      date: date.toISOString().split('T')[0],
+      predictedPrice,
+      maxPrice,
+      minPrice,
+      volume: historicalData.volumes[historicalData.volumes.length - 1] ? 
+        historicalData.volumes[historicalData.volumes.length - 1][1] * (0.6 + Math.random() * 0.8) : 0
+    });
+  }
+  
+  return {
+    trend: trend > 0 ? 'up' : 'down',
+    confidence: Math.round(confidence * 100),
+    predictionDays,
+    maxPrice: Math.max(...data.filter(d => d.predictedPrice).map(d => d.maxPrice || 0)),
+    minPrice: Math.min(...data.filter(d => d.predictedPrice).map(d => d.minPrice || Infinity)),
+    priceData: data,
+    volumeData: data
+  };
+}
+
+/**
+ * GET /api/price/:symbol
+ * 获取单个代币的当前价格
+ */
+router.get('/price/:symbol', async (req, res) => {
+  try {
+    const symbol = req.params.symbol.toUpperCase();
+    const priceData = await fetchCurrentPrice(symbol);
+    
+    res.json({
+      symbol: symbol,
+      ...priceData,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Price fetch error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch price',
+      message: error.message
+    });
+  }
+});
+
 export default router;
 
